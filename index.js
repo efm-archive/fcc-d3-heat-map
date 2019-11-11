@@ -29,6 +29,11 @@ const scaleY = d3.scaleBand().range([0, height]);
 const axisX = d3.axisBottom(scaleX);
 const axisY = d3.axisLeft(scaleY);
 
+const colorScale = d3
+  .scaleLinear()
+  .range(['blue', 'red'])
+  .domain([1, 10]);
+
 const description = d3
   .select('body')
   .append('div')
@@ -56,6 +61,7 @@ d3.json(
   .then(json => {
     // console.log('json :', json);
     const data = json.monthlyVariance;
+    const base = json.baseTemperature;
     // debugger;
 
     const yearsArray = [];
@@ -104,7 +110,7 @@ d3.json(
       .append('rect')
       .attr('class', 'cell')
       .attr('fill', d => {
-        return 'red';
+        return colorScale(base / 2 + d.variance);
       })
       .attr('x', d => {
         return scaleX(d.year) + margin.left;
