@@ -1,0 +1,38 @@
+body {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+#tooltip {
+  position: absolute;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #ddd;
+  border: 0px;
+  pointer-events: none;
+}
+
+#tooltipFlex {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 8px;
+  text-align: center;
+  font: 12px sans-serif;
+}
+#legend {
+  position: absolute;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  flex-direction: column;
+  right: 0px;
+}
