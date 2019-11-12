@@ -2,7 +2,7 @@
 
 const margin = { top: 50, right: 50, bottom: 50, left: 50 };
 
-const width = 900 - margin.left - margin.right;
+const width = 1200 - margin.left - margin.right;
 const height = 500 - margin.top - margin.bottom;
 
 const bodySvg = d3
@@ -31,7 +31,7 @@ const axisY = d3.axisLeft(scaleY);
 
 const colorScale = d3
   .scaleLinear()
-  .range(['blue', 'red'])
+  .range(['blue', 'crimson'])
   .domain([1, 10]);
 
 const description = d3
@@ -63,33 +63,49 @@ d3.json(
     const data = json.monthlyVariance;
     const base = json.baseTemperature;
     // debugger;
+    const minMax = {
+      months: {},
+      years: {}
+    };
+    data.forEach(item => {
+      // console.log('item :', item);
+      if (!minMax.hasOwnProperty(item.year)) {
+        minMax.years[item.year] = 1;
+      }
+      if (!minMax.hasOwnProperty(item.month)) {
+        minMax.months[item.month] = 1;
+      }
+      return;
+    });
+
+    const monthsArray = [];
+    for (const month in minMax.months) {
+      monthsArray.push(parseInt(month));
+    }
 
     const yearsArray = [];
-    data.forEach(({ year }) => {
-      // console.log('yearsArray :', yearsArray);
-      // console.log('item.month :', month);
-      // console.log('monthsArray.indexOf:', monthsArray.includes(month));
-      if (yearsArray.includes(year)) {
-        return null;
-      }
-      yearsArray.push(year);
-    });
+    for (const year in minMax.years) {
+      yearsArray.push(parseInt(year));
+    }
+
+    console.log('minMax :', minMax);
+    // data.forEach(({ year }) => {
+    //   if (yearsArray.includes(year)) {
+    //     return null;
+    //   }
+    //   yearsArray.push(year);
+    // });
     console.log('yearsArray :', yearsArray);
     scaleX.domain(yearsArray);
 
-    const monthsArray = [];
-    data.forEach(({ month }) => {
-      // console.log('monthsArray :', monthsArray);
-      // console.log('item.month :', month);
-      // console.log('monthsArray.indexOf:', monthsArray.includes(month));
-      if (monthsArray.includes(month)) {
-        return null;
-      }
-      monthsArray.push(month);
-    });
+    // data.forEach(({ month }) => {
+    //   if (monthsArray.includes(month)) {
+    //     return null;
+    //   }
+    //   monthsArray.push(month);
+    // });
     console.log('monthsArray :', monthsArray);
     scaleY.domain(monthsArray);
-    // scaleY.domain([new Date(1970, 0, 1), new Date(1970, 11, 31)]);
 
     bodySvg
       .append('g')
@@ -101,7 +117,7 @@ d3.json(
       .append('g')
       .attr('id', 'y-axis')
       .call(axisY);
-    // console.log('data :', data);
+
     const rect = d3
       .select('svg')
       .selectAll('rect')
@@ -110,7 +126,16 @@ d3.json(
       .append('rect')
       .attr('class', 'cell')
       .attr('fill', d => {
-        return colorScale(base / 2 + d.variance);
+        return colorScale(base + d.variance);
+      })
+      .attr('data-month', d => {
+        return d.month;
+      })
+      .attr('data-year', (d, i) => {
+        return d.year;
+      })
+      .attr('data-temp', d => {
+        return base + d.variance;
       })
       .attr('x', d => {
         return scaleX(d.year) + margin.left;
@@ -119,7 +144,41 @@ d3.json(
         return scaleY(d.month) + margin.top;
       })
       .attr('width', scaleX.bandwidth())
-      .attr('height', scaleY.bandwidth());
+      .attr('height', scaleY.bandwidth())
+      .on('mouseover', d => {
+        // console.log('d :', d);
+        // console.log('d3.event :', d3.event);
+        // console.log('d3.event.pageX :', d3.event.pageX);
+        // console.log('d3.event.pageY :', d3.event.pageY);
+        tooltipDiv
+          .style('left', d3.event.pageX + 10 + 'px')
+          .style('top', d3.event.pageY + 10 + 'px')
+          .attr('data-year', d.year);
+
+        tooltipDivFlex
+          .style('font-size', '14px')
+          .style('font-family', 'sans-serif')
+          .html(
+            'Month: ' +
+              d.month +
+              '<br/>Year: ' +
+              d.year +
+              '<br/>Temp: ' +
+              d.variance +
+              ''
+          );
+
+        tooltipDiv
+          .transition()
+          .duration(50)
+          .style('opacity', 0.8);
+      })
+      .on('mouseout', d => {
+        tooltipDiv
+          .transition()
+          .duration(600)
+          .style('opacity', 0);
+      });
   })
   .catch(err => {
     console.error(err);
