@@ -1,9 +1,9 @@
 // Margin Convention as per https://bl.ocks.org/mbostock/3019563
 
-const margin = { top: 50, right: 50, bottom: 50, left: 80 };
+const margin = { top: 50, right: 50, bottom: 150, left: 80 };
 
 const width = 1200 - margin.left - margin.right;
-const height = 500 - margin.top - margin.bottom;
+const height = 600 - margin.top - margin.bottom;
 
 const bodySvg = d3
   .select("body")
@@ -26,15 +26,8 @@ bodySvg
 const scaleX = d3.scaleBand().range([0, width]);
 const scaleY = d3.scaleBand().range([0, height]);
 
-const colorScale = d3
-  .scaleLinear()
-  .range(["blue", "crimson"])
-  .domain([1, 10]);
-
-const description = d3
-  .select("body")
-  .append("div")
-  .attr("id", "description");
+const colorScale = d3.scaleLinear().range(["blue", "crimson"]);
+// .domain([1, 9]);
 
 const tooltipDiv = d3
   .select("body")
@@ -47,11 +40,6 @@ const tooltipDivFlex = d3
   .append("div")
   .attr("id", "tooltipFlex");
 
-const legendDiv = d3
-  .select("body")
-  .append("div")
-  .attr("id", "legend");
-
 d3.json(
   "https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/global-temperature.json"
 )
@@ -59,23 +47,28 @@ d3.json(
     // console.log('json :', json);
     const data = json.monthlyVariance;
     const base = json.baseTemperature;
-    // debugger;
+
     const minMax = {
       months: {},
-      years: {}
+      years: {},
+      vRange: { min: 0, max: 0 }
     };
     data.forEach(item => {
-      // console.log('item :', item);
       if (!minMax.hasOwnProperty(item.year)) {
         minMax.years[item.year] = 1;
       }
       if (!minMax.hasOwnProperty(item.month)) {
         minMax.months[item.month] = 1;
       }
-      return;
+      if (minMax.vRange.min >= item.variance) {
+        minMax.vRange.min = item.variance;
+      }
+      if (minMax.vRange.max <= item.variance) {
+        minMax.vRange.max = item.variance;
+      }
     });
-
-    const monthsArrayManual = [
+    console.log("minMax :", minMax);
+    const monthNames = [
       "January",
       "February",
       "March",
@@ -100,25 +93,9 @@ d3.json(
       yearsArray.push(parseInt(year));
     }
 
-    console.log("minMax :", minMax);
-    // data.forEach(({ year }) => {
-    //   if (yearsArray.includes(year)) {
-    //     return null;
-    //   }
-    //   yearsArray.push(year);
-    // });
-    console.log("yearsArray :", yearsArray);
     scaleX.domain(yearsArray);
-
-    // data.forEach(({ month }) => {
-    //   if (monthsArray.includes(month)) {
-    //     return null;
-    //   }
-    //   monthsArray.push(month);
-    // });
-    console.log("monthsArray :", monthsArray);
     scaleY.domain(monthsArray);
-
+    colorScale.domain();
     const axisX = d3
       .axisBottom(scaleX)
       .tickValues(scaleX.domain().filter(year => year % 10 === 0));
@@ -126,7 +103,14 @@ d3.json(
     const axisY = d3
       .axisLeft(scaleY)
       .tickValues(scaleY.domain())
-      .tickFormat(month => monthsArrayManual[month]);
+      .tickFormat(month => monthNames[month]);
+    const colorRange =
+      Math.abs(minMax.vRange.min) + Math.abs(minMax.vRange.max);
+    const axisColorScale = d3
+      .axisLeft(colorScale)
+      .tickValues(colorScale.domain([0, colorRange]));
+    console.log("colorRange :", colorRange);
+    // .tickFormat(month => monthNames[month]);
 
     bodySvg
       .append("g")
@@ -140,10 +124,16 @@ d3.json(
       .call(axisY);
 
     bodySvg
+      .append("g")
+      .attr("id", "colorScale")
+      .attr("transform", "translate(0," + parseInt(height + 50) + ")")
+      .call(colorScale);
+
+    bodySvg
       .append("text")
       .attr("id", "description")
       .attr("x", width / 2)
-      .attr("y", -12)
+      .attr("y", -16)
       .attr("text-anchor", "middle")
       .style("font-size", "12px")
       .style("font-family", "sans-serif")
@@ -151,6 +141,7 @@ d3.json(
 
     const rect = d3
       .select("svg")
+      .append("g")
       .selectAll("rect")
       .data(data)
       .enter()
@@ -162,7 +153,7 @@ d3.json(
       .attr("data-month", d => {
         return d.month - 1;
       })
-      .attr("data-year", (d, i) => {
+      .attr("data-year", d => {
         return d.year;
       })
       .attr("data-temp", d => {
@@ -171,16 +162,12 @@ d3.json(
       .attr("x", d => {
         return scaleX(d.year) + margin.left;
       })
-      .attr("y", (d, i) => {
+      .attr("y", d => {
         return scaleY(d.month - 1) + margin.top;
       })
       .attr("width", scaleX.bandwidth())
       .attr("height", scaleY.bandwidth())
       .on("mouseover", d => {
-        // console.log('d :', d);
-        // console.log('d3.event :', d3.event);
-        // console.log('d3.event.pageX :', d3.event.pageX);
-        // console.log('d3.event.pageY :', d3.event.pageY);
         tooltipDiv
           .style("left", d3.event.pageX + 10 + "px")
           .style("top", d3.event.pageY + 10 + "px")
@@ -195,8 +182,8 @@ d3.json(
               "<br/>Year: " +
               d.year +
               "<br/>Temp: " +
-              d.variance +
-              ""
+              parseFloat(base + d.variance).toFixed(2) +
+              "°C"
           );
 
         tooltipDiv
@@ -211,10 +198,49 @@ d3.json(
           .style("opacity", 0);
       });
 
+    const rangeArr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
+    const boxSize = {
+      width: 16,
+      height: 16
+    };
     const legend = bodySvg
       .append("g")
       .attr("id", "legend")
-      .attr("transform", "translate(0," + height + 100 + ")");
+      .attr("transform", "translate(0," + parseInt(height + 30) + ")");
+
+    const legendRect = legend
+      .selectAll("rect")
+      .data(rangeArr)
+      .enter()
+      .append("rect")
+      .attr("class", "legendRect")
+      .attr("fill", d => colorScale(d))
+      .attr("x", d => {
+        return d * 16 - 16;
+      })
+      .attr("width", boxSize.width - 1)
+      .attr("height", boxSize.height);
+
+    legend
+      .append("text")
+      .attr("id", "legendDescriptionMin")
+      .data(rangeArr)
+      .attr("x", 0)
+      .attr("y", 30)
+      .attr("text-anchor", "middle")
+      .style("font-size", "12px")
+      .style("font-family", "sans-serif")
+      .text(parseFloat(base + minMax.vRange.min).toFixed(1) + "°C");
+    legend
+      .append("text")
+      .attr("id", "legendDescriptionMax")
+      .data(rangeArr)
+      .attr("x", rangeArr.length * boxSize.width)
+      .attr("y", 30)
+      .attr("text-anchor", "middle")
+      .style("font-size", "12px")
+      .style("font-family", "sans-serif")
+      .text(parseFloat(base + minMax.vRange.max).toFixed(1) + "°C");
   })
   .catch(err => {
     console.error(err);
